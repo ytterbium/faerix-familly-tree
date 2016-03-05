@@ -66,6 +66,25 @@
         });
     }
 
+    function flatten(root) {
+      var nodes = []
+      function aux(x) {
+        nodes.push(x)
+        x.children.forEach(aux)
+      }
+      aux(root)
+      return nodes
+    }
+    function treeLinks(nodes) {
+      links = []
+      nodes.forEach(function(x) {
+        x.children.forEach(function(y) {
+          links.push({"source":x,"target":y})
+        })
+      })
+      return links
+    }
+
     // ************** Generate the tree diagram	 *****************
     var colors = {
       "prez": "red",
@@ -91,11 +110,29 @@
 
     var diagonal = d3.svg.diagonal();
 
-    var tree = d3.layout.tree()
-      .separation(function(a, b) {
-        return a.parent == b.parent ? 8 : 10;
-      })
-      .size([width, height]);
+    // var tree = d3.layout.tree()
+    //   .separation(function(a, b) {
+    //     return a.parent == b.parent ? 8 : 10;
+    //   })
+    //   .size([width, height]);
+
+    var force = d3.layout.force()
+        .charge(function(n) {
+            return -200;
+        })
+        .friction(0.95)
+        .gravity(0.02)
+        .linkStrength(0.2)
+        .linkDistance(function(l) {
+            return 30;
+        })
+        .size([width, height]);
+
+    var drag = force.drag()
+        .on("dragstart", function() {
+          d3.event.sourceEvent.stopPropagation();
+        });
+
 
     var baseSvg = d3.select("body").append("svg")
       .attr("width", width + margin.right + margin.left)
@@ -111,24 +148,72 @@
     var initTree = function(data) {
       var root = treeify(data);
       root.promo = 1950;
-      root.x0 = width / 2;
-      root.y0 = 0;
 
       function isNotRoot(d) { return d.name != "__"; }
+
+      var node, link
+      force.on("tick", function(){
+        force.nodes().forEach(function(d) {
+          if (!d.fixed) {
+            var r = 10 + 4, dx, dy, ly = 50;
+
+            // #1: constraint all nodes to the visible screen:
+            //d.x = Math.min(width - r, Math.max(r, d.x));
+            //d.y = Math.min(height - r, Math.max(r, d.y));
+
+            // #1.0: hierarchy: same level nodes have to remain with a 1 LY band vertically:
+            if (d.children || d._children) {
+              var py = 0;
+              // if (d.parent) {
+              //   py = d.parent.y;
+              // }
+              d.y = py + (d.promo - 2000) * ly + r;
+              d.py = d.y
+            }
+
+            // #1a: constraint all nodes to the visible screen: links
+            // dx = Math.min(0, width - r - d.x) + Math.max(0, r - d.x);
+            // dy = Math.min(0, height - r - d.y) + Math.max(0, r - d.y);
+            // d.x += 2 * Math.max(-ly, Math.min(ly, dx));
+            // d.y += 2 * Math.max(-ly, Math.min(ly, dy));
+            // // #1b: constraint all nodes to the visible screen: charges ('repulse')
+            // dx = Math.min(0, width - r - d.px) + Math.max(0, r - d.px);
+            // dy = Math.min(0, height - r - d.py) + Math.max(0, r - d.py);
+            // d.px += 2 * Math.max(-ly, Math.min(ly, dx));
+            // d.py += 2 * Math.max(-ly, Math.min(ly, dy));
+
+            // #2: hierarchy means childs must be BELOW parents in Y direction:
+            // if (d.parent) {
+            //   d.y = Math.max(d.y, d.parent.y + ly);
+            //   d.py = Math.max(d.py, d.parent.py + ly);
+            // }
+          }
+        });
+
+        link.attr("d", diagonal);
+
+        node.attr("transform", function(d) {
+          return 'translate(' + [d.x, d.y] + ')';
+        });
+      })
 
       var id = 0
       var click
       var update = function(source) {
-        var nodes = tree.nodes(root).reverse(),
-            links = tree.links(nodes);
+        var nodes = flatten(root)
+        var links = treeLinks(nodes)
 
-        nodes = _.filter(nodes, isNotRoot)
-        links = _.filter(links, function(l) { return isNotRoot(l.source); })
+        force
+            .nodes(nodes)
+            .links(links)
+            .start();
+        // nodes = _.filter(nodes, isNotRoot)
+        // links = _.filter(links, function(l) { return isNotRoot(l.source); })
 
 
-        nodes.forEach(function(d) { d.y = (d.promo - 2000) * 50; });
+        // nodes.forEach(function(d) { d.y = (d.promo - 2000) * 50; });
 
-        var node = svg.selectAll("g.node")
+        node = svg.selectAll("g.node")
           .data(nodes, function(d) { return d.id || (d.id = ++id); });
 
         // Enter any new nodes at the parent's previous position.
@@ -149,6 +234,7 @@
           .style("fill", function(d) {
             return d._children ? "lightsteelblue" : "#fff";
           })
+          .call(drag)
           .on("click", click)
           ;
 
@@ -166,7 +252,7 @@
 
         // Transition nodes to their new position.
         var nodeUpdate = node.transition()
-          .duration(duration)
+          // .duration(duration)
           .attr("transform", function(d) {
             return "translate(" + d.x + "," + d.y + ")";
           });
@@ -183,7 +269,7 @@
 
         // Transition exiting nodes to the parent's new position.
         var nodeExit = node.exit().transition()
-          .duration(duration)
+          // .duration(duration)
           .attr("transform", function(d) {
             return "translate(" + source.x + "," + source.y + ")";
           })
@@ -198,7 +284,7 @@
 
 
         // Update the links…
-        var link = svg.selectAll("path.link")
+        link = svg.selectAll("path.link")
           .data(links, function(d) { return d.target.id; });
 
         // Enter any new links at the parent's previous position.
@@ -215,12 +301,12 @@
 
         // Transition links to their new position.
         link.transition()
-          .duration(duration)
+          // .duration(duration)
           .attr("d", diagonal);
 
         // Transition exiting nodes to the parent's new position.
         link.exit().transition()
-          .duration(duration)
+          // .duration(duration)
           .attr("d", function(d) {
             return diagonal({ source: source, target: source });
           })
@@ -236,12 +322,13 @@
 
       // Toggle children on click.
       click = function(d) {
-        if (d.children) {
+        if (d3.event.defaultPrevented) return; // click suppressed
+        if (d.children && d.children.length > 0) {
           d._children = d.children;
-          d.children = null;
+          d.children = [];
         } else {
           d.children = d._children;
-          d._children = null;
+          d._children = [];
         }
         update(d);
       }
