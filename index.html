@@ -31,9 +31,21 @@
   <script src="http://d3js.org/d3.v3.min.js"></script>
 
   <script>
+    function norm_name(n){ return n.toLowerCase(); }
+    function uniq_name(d){ return d.promo + "-" + norm_name(d.name); }
+
     function treeify(data) {
       var dataMap = data.reduce(function(map, node) {
-        var n = node.name.toLowerCase();
+        var n = norm_name(node.name)
+        if(map[n]) {
+          if(map[n] !== true) {
+            console.log("duplicate name: " + n);
+            var other = map[n]
+            map[uniq_name(other)] = other
+            map[n] = true
+          }
+          n = uniq_name(node)
+        }
         map[n] = node;
         return map;
       }, {});
@@ -41,8 +53,11 @@
       data.forEach(function(node) {
           node.children = _.chain(node.children || [])
             .map(function(k) {
-              k = k.toLowerCase()
-              if(dataMap[k]) {
+              k = norm_name(k)
+              if(dataMap[k] === true) {
+                console.log("Attempting to use duplicate name " + k + "; use unique names formatted as \"<promo>-<name>\"");
+                return undefined
+              } else if(dataMap[k]) {
                 var v = dataMap[k]
                 delete dataMap[k]
                 return v
@@ -55,7 +70,8 @@
             .value()
       });
 
-      return _.values(dataMap);
+      return _.values(dataMap)
+          .filter(function(x){ return x !== true; });
     }
 
     function zoom(svg) {
@@ -341,7 +357,11 @@
         return d
       })
       .get(function(error, rows) {
-        initTree(rows)
+        if(error) {
+          console.log(error);
+        } else {
+          initTree(rows);
+        }
       });
   </script>
 
