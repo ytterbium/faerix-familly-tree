@@ -31,7 +31,7 @@
   <script src="http://d3js.org/d3.v3.min.js"></script>
 
   <script>
-    function norm_name(n){ return n.toLowerCase(); }
+    function norm_name(n){ return n.toLowerCase().trim(); }
     function uniq_name(d){ return d.promo + "-" + norm_name(d.name); }
 
     function treeify(data) {
