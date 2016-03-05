@@ -109,6 +109,9 @@
 
     // d3.select(self.frameElement).style("height", "780px");
 
+    var node_depth = function(d) { return d.promo - 1950; }
+    var node_y = function(d) { return (node_depth(d) - 50) * line_height; }
+
     var diagonal = d3.svg.diagonal();
 
     var force = d3.layout.force()
@@ -140,8 +143,43 @@
     baseSvg.call(zoom(svg))
 
 
+    var initData = function(roots) {
+      var nodes = [], i = 0, level_widths = [1];
+
+      function recurse(node, parent) {
+        if (!node.id) node.id = ++i;
+        node.parent = parent;
+        node.y = node_y(node);
+
+        var depth = node_depth(node)
+        var w = level_widths[depth]
+        var x =  w + 1 || 0
+        x = Math.max(x, parent && parent.x || 0)
+        level_widths[depth] = Math.max(w || 0, x)
+        node.x = x;
+
+        if (node.children) {
+          node.children.forEach(function(v) {
+            return recurse(v, node);
+          })
+        }
+        nodes.push(node);
+      }
+
+      recurse({"children":roots});
+
+      // now correct/balance the x positions:
+      var max_width = _.max(level_widths) || 1
+      var kx = (width - 20) / max_width;
+      nodes.forEach(function(d) {
+        d.x *= kx;
+      })
+    }
+
+
     var initTree = function(data) {
       var roots = treeify(data);
+      initData(roots)
 
       function isNotRoot(d) { return d.name != "__"; }
 
@@ -149,7 +187,7 @@
 
       force.on("tick", function(){
         force.nodes().forEach(function(d) {
-          d.py = d.y = (d.promo - 2000) * line_height;
+          d.py = d.y = node_y(d);
         });
 
         link.attr("d", diagonal);
@@ -159,7 +197,6 @@
         });
       })
 
-      var id = 0
       var click
       var update = function(source) {
         var nodes = _.flatMap(roots, flatten)
@@ -172,7 +209,7 @@
 
 
         node = svg.selectAll("g.node")
-          .data(nodes, function(d) { return d.id || (d.id = ++id); });
+          .data(nodes, function(d) { return d.id; });
 
         // Enter any new nodes at the parent's previous position.
         var nodeEnter = node.enter()
@@ -286,7 +323,7 @@
           d.children = [];
         } else {
           d.children = d._children;
-          d._children = [];
+          d._children = null;
         }
         update(d);
       }
