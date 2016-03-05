@@ -55,7 +55,7 @@
             .value()
       });
 
-      return {"name": "__", "children": _.values(dataMap)};
+      return _.values(dataMap);
     }
 
     function zoom(svg) {
@@ -104,17 +104,12 @@
     var margin = { top: 20, right: 120, bottom: 20, left: 120 }
     var width = $(document).width() - margin.right - margin.left
     var height = $(document).height() - margin.top - margin.bottom
+    var line_height = 50;
     var duration = 750
 
     // d3.select(self.frameElement).style("height", "780px");
 
     var diagonal = d3.svg.diagonal();
-
-    // var tree = d3.layout.tree()
-    //   .separation(function(a, b) {
-    //     return a.parent == b.parent ? 8 : 10;
-    //   })
-    //   .size([width, height]);
 
     var force = d3.layout.force()
         .charge(function(n) {
@@ -124,7 +119,7 @@
         .gravity(0.02)
         .linkStrength(0.2)
         .linkDistance(function(l) {
-            return 30;
+            return line_height;
         })
         .size([width, height]);
 
@@ -146,47 +141,29 @@
 
 
     var initTree = function(data) {
-      var root = treeify(data);
-      root.promo = 1950;
+      var roots = treeify(data);
 
       function isNotRoot(d) { return d.name != "__"; }
 
       var node, link
+
+      function cstr_abs(x, m) {
+        return Math.max(-m, Math.min(m, x))
+      }
+      function d_boundary(x, min, max) {
+        return Math.max(0, min - x) + Math.min(0, max - x);
+      }
       force.on("tick", function(){
         force.nodes().forEach(function(d) {
           if (!d.fixed) {
-            var r = 10 + 4, dx, dy, ly = 50;
+            var r = 10 + 4, dx;
 
-            // #1: constraint all nodes to the visible screen:
-            //d.x = Math.min(width - r, Math.max(r, d.x));
-            //d.y = Math.min(height - r, Math.max(r, d.y));
+            dx = d_boundary(d.x, r, width - r)
+            d.x += 2 * cstr_abs(dx, 50);
+            dx = d_boundary(d.px, r, width - r)
+            d.px += 2 * cstr_abs(dx, 50);
 
-            // #1.0: hierarchy: same level nodes have to remain with a 1 LY band vertically:
-            if (d.children || d._children) {
-              var py = 0;
-              // if (d.parent) {
-              //   py = d.parent.y;
-              // }
-              d.y = py + (d.promo - 2000) * ly + r;
-              d.py = d.y
-            }
-
-            // #1a: constraint all nodes to the visible screen: links
-            // dx = Math.min(0, width - r - d.x) + Math.max(0, r - d.x);
-            // dy = Math.min(0, height - r - d.y) + Math.max(0, r - d.y);
-            // d.x += 2 * Math.max(-ly, Math.min(ly, dx));
-            // d.y += 2 * Math.max(-ly, Math.min(ly, dy));
-            // // #1b: constraint all nodes to the visible screen: charges ('repulse')
-            // dx = Math.min(0, width - r - d.px) + Math.max(0, r - d.px);
-            // dy = Math.min(0, height - r - d.py) + Math.max(0, r - d.py);
-            // d.px += 2 * Math.max(-ly, Math.min(ly, dx));
-            // d.py += 2 * Math.max(-ly, Math.min(ly, dy));
-
-            // #2: hierarchy means childs must be BELOW parents in Y direction:
-            // if (d.parent) {
-            //   d.y = Math.max(d.y, d.parent.y + ly);
-            //   d.py = Math.max(d.py, d.parent.py + ly);
-            // }
+            d.py = d.y = (d.promo - 2000) * line_height + r;
           }
         });
 
@@ -200,7 +177,7 @@
       var id = 0
       var click
       var update = function(source) {
-        var nodes = flatten(root)
+        var nodes = _.flatMap(roots, flatten)
         var links = treeLinks(nodes)
 
         force
@@ -333,7 +310,7 @@
         update(d);
       }
 
-      update(root);
+      update({x:0,y:0,x0:0,y0:0});
     }
 
 
