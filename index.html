@@ -107,15 +107,14 @@
       "vice": "orange",
       "trez": "blue",
       "conv": "brown",
-      // "relex": "",
-      // "web": "",
-      // "com": "",
-      // "pjc": "",
-      // "asphalte": "",
-      // "touriste": "",
-      // "magic": "",
-      // "ami": "",
-      // "neverseen": "",
+      "relex": "purple",
+      "web": "gray",
+      "com": "green",
+      "pjc": "darkgreen",
+      "asphalte": "darkgrey",
+      "touriste": "pink",
+      "magic": "yellow",
+      "neverseen": "lightgrey",
     }
     var margin = { top: 20, right: 120, bottom: 20, left: 120 }
     var width = $(document).width() - margin.right - margin.left
@@ -240,7 +239,7 @@
         nodeEnter.append("circle")
           .attr("r", 1e-6)
           .style("stroke", function(d) {
-            return colors[d.respo] || "black";
+            return colors[d.respo[0]] || "black";
           })
           .style("fill", function(d) {
             return d._children ? "lightsteelblue" : "#fff";
@@ -254,9 +253,10 @@
           .attr("text-anchor", "middle")
           .text(function(d) { return d.name; })
           .style("fill-opacity", 1e-6)
-          .append("svg:title")
+        nodeEnter.append("svg:title")
           .text(function(d) {
-            return (d.real_name ? d.real_name : "?") + " (" + d.promo + ")";
+            return (d.real_name ? d.real_name : "?") + " (" + d.promo + ")"
+                + "\n" + _.join(d.respo, ", ");
           })
           ;
 
@@ -350,10 +350,12 @@
 
   </script>
   <script>
+    function split(s, sep) { return s == "" ? [] : s.split(sep) }
     d3.csv("faerix.csv")
       .row(function(d) {
         d.promo = +d.promo
-        d.children = d.children == "" ? [] : d.children.split(";")
+        d.respo = split(d.respo, ";")
+        d.children = split(d.children, ";")
         return d
       })
       .get(function(error, rows) {
