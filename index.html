@@ -147,24 +147,9 @@
 
       var node, link
 
-      function cstr_abs(x, m) {
-        return Math.max(-m, Math.min(m, x))
-      }
-      function d_boundary(x, min, max) {
-        return Math.max(0, min - x) + Math.min(0, max - x);
-      }
       force.on("tick", function(){
         force.nodes().forEach(function(d) {
-          if (!d.fixed) {
-            var r = 10 + 4, dx;
-
-            dx = d_boundary(d.x, r, width - r)
-            d.x += 2 * cstr_abs(dx, 50);
-            dx = d_boundary(d.px, r, width - r)
-            d.px += 2 * cstr_abs(dx, 50);
-
-            d.py = d.y = (d.promo - 2000) * line_height + r;
-          }
+          d.py = d.y = (d.promo - 2000) * line_height;
         });
 
         link.attr("d", diagonal);
