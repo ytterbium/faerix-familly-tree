@@ -130,15 +130,11 @@
     var diagonal = d3.svg.diagonal();
 
     var force = d3.layout.force()
-        .charge(function(n) {
-            return -200;
-        })
+        .charge(-300)
         .friction(0.95)
         .gravity(0.02)
-        .linkStrength(0.2)
-        .linkDistance(function(l) {
-            return line_height;
-        })
+        .linkStrength(0.5)
+        .linkDistance(line_height)
         .size([width, height]);
 
     var drag = force.drag()
@@ -159,7 +155,8 @@
 
 
     var initData = function(roots) {
-      var nodes = [], i = 0, level_widths = [1];
+      var nodes = [], i = 0;
+      var node_grid = {}
 
       function recurse(node, parent) {
         if (!node.id) node.id = ++i;
@@ -167,10 +164,12 @@
         node.y = node_y(node);
 
         var depth = node_depth(node)
-        var w = level_widths[depth]
-        var x =  w + 1 || 0
-        x = Math.max(x, parent && parent.x || 0)
-        level_widths[depth] = Math.max(w || 0, x)
+        if(!node_grid[depth]) node_grid[depth] = []
+        var row = node_grid[depth]
+        var x = parent && parent.x || 0
+        while(x >= row.length) row.push(false)
+        while(row[x]) x++
+        row[x] = true
         node.x = x;
 
         if (node.children) {
@@ -184,7 +183,7 @@
       recurse({"children":roots});
 
       // now correct/balance the x positions:
-      var max_width = _.max(level_widths) || 1
+      var max_width = _.max(_.map(_.values(node_grid), _.size))
       var kx = (width - 20) / max_width;
       nodes.forEach(function(d) {
         d.x *= kx;
