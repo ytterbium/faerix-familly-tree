@@ -354,8 +354,8 @@
     d3.csv("faerix.csv")
       .row(function(d) {
         d.promo = +d.promo
-        d.respo = split(d.respo, ";")
-        d.children = split(d.children, ";")
+        d.respo = split(d.respo, /[;,]/)
+        d.children = split(d.children, /[;,]/)
         return d
       })
       .get(function(error, rows) {
