@@ -130,7 +130,10 @@
     var diagonal = d3.svg.diagonal();
 
     var force = d3.layout.force()
-        .charge(-300)
+        .charge(function(d) {
+          // Why not ? x)
+          return -50 - Math.max(0, Math.pow(d.name.length/2, 2) - 5)
+        })
         .friction(0.95)
         .gravity(0.02)
         .linkStrength(0.5)
@@ -194,8 +197,6 @@
     var initTree = function(data) {
       var roots = treeify(data);
       initData(roots)
-
-      function isNotRoot(d) { return d.name != "__"; }
 
       var node, link
 
