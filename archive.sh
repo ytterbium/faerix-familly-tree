@@ -1,4 +1,4 @@
-#!/usr/bin/sh
+#!/bin/sh
 
 WD=$(pwd)
 BASENAME=$(readlink -f "$0")
