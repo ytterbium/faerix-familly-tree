@@ -350,7 +350,7 @@
 
   </script>
   <script>
-    function split(s, sep) { console.log(s);return s == "" ? [] : _.map(s.split(sep), _.trim) }
+    function split(s, sep) { return s == "" ? [] : _.map(s.split(sep), _.trim) }
     d3.csv("faerix.csv")
       .row(function(d) {
         d.promo = +d.promo
